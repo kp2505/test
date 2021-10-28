@@ -35,20 +35,13 @@ export const MainPage: React.FC = () => {
     const [objectList, setObjectList] = useState<EntityInterface[]>([])
     const [isCompleted] = useState(false)
     const [activeEntity, setActiveObject] = useState<EntityInterface | null>(null)
-    const [requestParams, setRequestParams] = useState({ pageNumber:0, pageSize: 5 })
+    const [requestParams, setRequestParams] = useState({pageNumber: 0, pageSize: 5})
     const [pageCount, setPageCount] = useState(1)
 
     const getEntities = useCallback(() => {
         try {
             request('/entities', 'GET').then(data => {
-                const mas = data.map((val: String) => {
-                    const result = getEntity(val);
-                    return {
-                        name: `${result.name}`,
-                        url: `${result.url}`,
-                        localizedName: `${result.localizedName}`,
-                    };
-                })
+                const mas = data.map((val: String) => getEntity(val))
                 setObjectList(mas);
             })
         } catch (e) {
@@ -79,34 +72,30 @@ export const MainPage: React.FC = () => {
 
     useEffect(() => {
         const tableElements = checkedList.slice(1);
-        if (tableElements.length === 1) {
-            setActiveRow(tableElements[0])
-        } else {
-            setActiveRow(null)
-        }
-
+        const activeElement = tableElements.length === 1 ? tableElements[0] : null
+        setActiveRow(activeElement)
     }, [checkedList])
 
-    const onChangePage  = (pageNumber:number) => {
-        const newRequestParams = { pageNumber, pageSize: 5  }
+    const onChangePage = (pageNumber: number) => {
+        const newRequestParams = {pageNumber, pageSize: 5}
         setRequestParams(newRequestParams)
-        getRows(activeEntity?.name,newRequestParams)
+        getRows(activeEntity?.name, newRequestParams)
     }
 
     const selectEntity = (value: string) => {
         setPageCount(0);
-        const newRequestParams = { pageNumber: 0, pageSize: 5  }
+        const newRequestParams = {pageNumber: 0, pageSize: 5}
         setRequestParams(newRequestParams)
-        getRows(value,newRequestParams)
+        getRows(value, newRequestParams)
     }
 
-    const getRows = (value: any,params = requestParams) => {
+    const getRows = (value: any, params = requestParams) => {
         const result = getEntity(value);
         setActiveRow(null);
         clearError();
         onCheckedChange([{} as IRowsInterface])
         try {
-            const url = getRequestUrl(result.url,params);
+            const url = getRequestUrl(result.url, params);
             request(url, 'GET').then(data => {
                 setActiveObject(result);
                 setColumns(result.tableHeader);
@@ -120,11 +109,12 @@ export const MainPage: React.FC = () => {
                 })
                 setPageCount(data.totalPages)
                 setRows(resultedRows)
-            }).catch((e)=> {
+            }).catch(() => {
                 setColumns(defaultHeader);
                 setRows([])
             })
-        } catch (e) {}
+        } catch (e) {
+        }
     }
 
     const modifyObject = useCallback((object: any, method: String) => {
@@ -195,7 +185,7 @@ export const MainPage: React.FC = () => {
                             checked={checkedList}
                             columns={getVisibleEntityFields(columns)}
                             onCheckedChange={onCheckedChange}
-                            onChangePage={(page)=>onChangePage(page)}
+                            onChangePage={(page) => onChangePage(page)}
                             currentPage={requestParams.pageNumber}
                             pageCount={pageCount}
                         />
