@@ -4,13 +4,13 @@ import { EntityInterface } from "../../interfaces";
 
 interface ObjectSelectProps {
     objectList: EntityInterface[],
-    selectType: (e: any) => any,
+    getRows: (e: any) => any,
 }
 
-export const ObjectSelect: React.FC<ObjectSelectProps> = ({objectList, selectType})  => {
+export const ObjectSelect: React.FC<ObjectSelectProps> = ({objectList, getRows})  => {
     return (
         <Select
-            onChange={(e)=>selectType(e)}
+            onChange={(e)=>getRows(e.target.value)}
             label="Выберите объект"
             formControlStyle={{ width: '400px' }}
 

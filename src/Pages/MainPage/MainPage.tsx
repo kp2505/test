@@ -14,6 +14,7 @@ import {IRowsInterface, EntityInterface} from "../../interfaces";
 import {useHttp} from "../../hooks/http.hook";
 import {getEntity, getObjectId, getVisibleEntityFields} from "../../helpers/entities/entities";
 import {defaultHeader} from "../../constants/headerStructure";
+import {getRequestUrl} from "../../helpers/http/http";
 
 function ThemeWrapper(props: any) {
     return (
@@ -34,6 +35,8 @@ export const MainPage: React.FC = () => {
     const [objectList, setObjectList] = useState<EntityInterface[]>([])
     const [isCompleted] = useState(false)
     const [activeEntity, setActiveObject] = useState<EntityInterface | null>(null)
+    const [requestParams, setRequestParams] = useState({ pageNumber:0, pageSize: 5 })
+    const [pageCount, setPageCount] = useState(1)
 
     const getEntities = useCallback(() => {
         try {
@@ -60,6 +63,7 @@ export const MainPage: React.FC = () => {
         setEditDialogVisible(true)
     }, [])
 
+
     const onEditDialogClose = () => {
         setEditDialogVisible(false)
     }
@@ -83,16 +87,30 @@ export const MainPage: React.FC = () => {
 
     }, [checkedList])
 
-    const selectObject = (e: any) => {
-        const result = getEntity(e.target.value);
+    const onChangePage  = (pageNumber:number) => {
+        const newRequestParams = { pageNumber, pageSize: 5  }
+        setRequestParams(newRequestParams)
+        getRows(activeEntity?.name,newRequestParams)
+    }
+
+    const selectEntity = (value: string) => {
+        const newRequestParams = { pageNumber: 1, pageSize: 5  }
+        setRequestParams(newRequestParams)
+        getRows(value,newRequestParams)
+    }
+
+    const getRows = (value: any,params = requestParams) => {
+        const result = getEntity(value);
         setActiveRow(null);
         clearError();
         onCheckedChange([{} as IRowsInterface])
+
         try {
-            request(result.url, 'GET').then(data => {
-                setActiveObject(result)
-                setColumns(result.tableHeader)
-                const resultedRows = data.map((column: any) => {
+            const url = getRequestUrl(result.url,params);
+            request(url, 'GET').then(data => {
+                setActiveObject(result);
+                setColumns(result.tableHeader);
+                const resultedRows = data.content.map((column: any) => {
                     const resultedRow: any = {};
                     for (const key in column) {
                         resultedRow[result.fieldByName[key]] = column[key]
@@ -100,7 +118,8 @@ export const MainPage: React.FC = () => {
 
                     return resultedRow;
                 })
-                setRows(resultedRows.slice(0, 10))
+                setPageCount(data.totalPages)
+                setRows(resultedRows)
             })
         } catch (e) {
         }
@@ -149,8 +168,9 @@ export const MainPage: React.FC = () => {
         <div className="App">
             <ThemeWrapper>
                 <Header/>
+                {requestParams.pageNumber}
                 <div className="main">
-                    <ObjectSelect objectList={objectList} selectType={selectObject}/>
+                    <ObjectSelect objectList={objectList} getRows={getRows}/>
                     <div className="main-table">
                         {error &&
                         <Alert
@@ -174,6 +194,9 @@ export const MainPage: React.FC = () => {
                             checked={checkedList}
                             columns={getVisibleEntityFields(columns)}
                             onCheckedChange={onCheckedChange}
+                            onChangePage={(page)=>onChangePage(page)}
+                            currentPage={requestParams.pageNumber}
+                            pageCount={pageCount}
                         />
                     </div>
                 </div>
