@@ -94,7 +94,8 @@ export const MainPage: React.FC = () => {
     }
 
     const selectEntity = (value: string) => {
-        const newRequestParams = { pageNumber: 1, pageSize: 5  }
+        setPageCount(0);
+        const newRequestParams = { pageNumber: 0, pageSize: 5  }
         setRequestParams(newRequestParams)
         getRows(value,newRequestParams)
     }
@@ -104,7 +105,6 @@ export const MainPage: React.FC = () => {
         setActiveRow(null);
         clearError();
         onCheckedChange([{} as IRowsInterface])
-
         try {
             const url = getRequestUrl(result.url,params);
             request(url, 'GET').then(data => {
@@ -120,9 +120,11 @@ export const MainPage: React.FC = () => {
                 })
                 setPageCount(data.totalPages)
                 setRows(resultedRows)
+            }).catch((e)=> {
+                setColumns(defaultHeader);
+                setRows([])
             })
-        } catch (e) {
-        }
+        } catch (e) {}
     }
 
     const modifyObject = useCallback((object: any, method: String) => {
@@ -168,9 +170,8 @@ export const MainPage: React.FC = () => {
         <div className="App">
             <ThemeWrapper>
                 <Header/>
-                {requestParams.pageNumber}
                 <div className="main">
-                    <ObjectSelect objectList={objectList} getRows={getRows}/>
+                    <ObjectSelect objectList={objectList} getRows={selectEntity}/>
                     <div className="main-table">
                         {error &&
                         <Alert
