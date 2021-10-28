@@ -1,0 +1,13 @@
+.PendingComponent {
+    top: 0;
+    left: 0;
+    position: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    opacity: 0.8;
+    background: white;
+    z-index: 10;
+}
