@@ -1,17 +1,11 @@
 import {useState, useCallback} from "react";
-
-const localizedError = {
-    'POST': 'Что-то пошло не так во время создания данных',
-    'GET': 'Что-то пошло не так во время получения данных',
-    'DELETE': 'Что-то пошло не так во время удаления данных',
-    'PUT':  'Что-то пошло не так во время изменения данных'
-}
+import { localizedError } from "../constants/messages";
 
 export const useHttp = () => {
     const [pending, setPending] = useState(false)
     const [error, setError] = useState(null)
 
-    const request = useCallback(async  (url, method = 'get', body = null, headers = {}) => {
+    const request = useCallback(async (url, method = 'get', body = null, headers = {}) => {
         setPending(true)
         try {
             if (body) {
@@ -19,10 +13,10 @@ export const useHttp = () => {
                 headers['Content-type'] = 'application/json'
             }
             const mode = 'cors';
-            const response = await fetch(url, { method, body, headers,mode })
+            const response = await fetch(url, {method, body, headers, mode})
 
             let data = [];
-            if(method=== 'GET') {
+            if (method === 'GET') {
                 data = await response.json()
             }
 
@@ -34,7 +28,7 @@ export const useHttp = () => {
 
             setPending(false)
 
-            return data ;
+            return data;
         } catch (e) {
             setPending(false)
             setError(localizedError[method])
@@ -44,5 +38,5 @@ export const useHttp = () => {
 
     const clearError = useCallback(() => setError(null), [])
 
-    return { pending, request, error, clearError }
+    return {pending, request, error, clearError}
 }

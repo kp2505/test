@@ -20,7 +20,7 @@ export interface EntityInterface {
     url: string,
     localizedName: string,
     tableHeader?: any,
-    fieldByName? : any,
+    fieldByName : any,
     compositeIdField?: any,
 }
 
@@ -29,4 +29,10 @@ export interface factoryTableHeaderInterface {
     title: String,
     editable?: boolean,
     invisible?: boolean,
+}
+
+export interface requestInterface {
+    page: number,
+    size: number,
+    sort?: string,
 }

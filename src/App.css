@@ -74,6 +74,11 @@ body {
 .btn-container {
   display: flex;
   justify-content: space-between;
+}
+
+.bar-container {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 20px;
 }
 

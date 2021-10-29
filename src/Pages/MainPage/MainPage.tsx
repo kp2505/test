@@ -10,10 +10,13 @@ import {
 import {TableColumn} from '@nlmk/ds/dist/components/Table'
 import {Alert, CommonWrapper} from '@nlmk/ds/dist/components'
 import React, {useCallback, useEffect, useState} from "react";
-import {IRowsInterface, EntityInterface} from "../../interfaces";
+import {IRowsInterface, EntityInterface, requestInterface} from "../../interfaces";
 import {useHttp} from "../../hooks/http.hook";
 import {getEntity, getObjectId, getVisibleEntityFields} from "../../helpers/entities/entities";
 import {defaultHeader} from "../../constants/headerStructure";
+import {getRequestUrl} from "../../helpers/http/http";
+import {defaultRequestParams} from "../../constants/defaultRequestParams";
+import {requestMessages} from "../../constants/messages";
 
 function ThemeWrapper(props: any) {
     return (
@@ -22,32 +25,29 @@ function ThemeWrapper(props: any) {
 }
 
 export const MainPage: React.FC = () => {
-    const {request, pending, error, clearError} = useHttp()
-    const [checkedList, onCheckedChange] = useState<IRowsInterface[]>([{} as IRowsInterface])
+    const { request, pending, error, clearError } = useHttp()
+    const [requestParams, setRequestParams] = useState<requestInterface>(defaultRequestParams)
+    const [pageCount, setPageCount] = useState(1)
+    const [notification, setNotification] = useState<string | null>(null)
+
     const [isEditDialogVisible, setEditDialogVisible] = useState(false)
     const [isCreateDialogVisible, setCreateDialogVisible] = useState(false)
     const [isLoadDialogVisible, setLoadDialogVisible] = useState(false)
     const [activeRow, setActiveRow] = useState<IRowsInterface | null>(null)
     const [isLoading, setLoading] = useState(false)
+    const [isCompleted] = useState(false)
+
     const [rows, setRows] = useState<IRowsInterface[]>([])
     const [columns, setColumns] = useState<TableColumn<IRowsInterface>[]>(defaultHeader)
-    const [objectList, setObjectList] = useState<EntityInterface[]>([])
-    const [isCompleted] = useState(false)
-    const [activeEntity, setActiveObject] = useState<EntityInterface | null>(null)
+    const [checkedList, onCheckedChange] = useState<IRowsInterface[]>([{} as IRowsInterface])
 
-    const getEntities = useCallback(() => {
+    const [objectList, setObjectList] = useState<EntityInterface[]>([])
+    const [activeEntity, setActiveEntity] = useState<EntityInterface | null>(null)
+
+    const getEntities = useCallback(async () => {
         try {
-            request('/entities', 'GET').then(data => {
-                const mas = data.map((val: String) => {
-                    const result = getEntity(val);
-                    return {
-                        name: `${result.name}`,
-                        url: `${result.url}`,
-                        localizedName: `${result.localizedName}`,
-                    };
-                })
-                setObjectList(mas);
-            })
+            const mas = (await request('/entities', 'GET')).map((val: String) => getEntity(val))
+            setObjectList(mas);
         } catch (e) {
         }
     }, [request])
@@ -59,6 +59,7 @@ export const MainPage: React.FC = () => {
     const onEditDialogOpen = useCallback(() => {
         setEditDialogVisible(true)
     }, [])
+
 
     const onEditDialogClose = () => {
         setEditDialogVisible(false)
@@ -72,27 +73,27 @@ export const MainPage: React.FC = () => {
         setCreateDialogVisible(false)
     }
 
+    const clearRows = () => {
+        setRows([])
+        setPageCount(0);
+    }
 
-    useEffect(() => {
-        const tableElements = checkedList.slice(1);
-        if (tableElements.length === 1) {
-            setActiveRow(tableElements[0])
-        } else {
-            setActiveRow(null)
-        }
+    const clearNotifications = useCallback(()=>{
+        setNotification(null)
+        clearError()
+    },[clearError])
 
-    }, [checkedList])
-
-    const selectObject = (e: any) => {
-        const result = getEntity(e.target.value);
+    const getRows = useCallback((value: any, params = requestParams) => {
+        const result = getEntity(value);
+        setActiveEntity(result);
+        setColumns(result.tableHeader);
         setActiveRow(null);
-        clearError();
+        clearNotifications();
         onCheckedChange([{} as IRowsInterface])
         try {
-            request(result.url, 'GET').then(data => {
-                setActiveObject(result)
-                setColumns(result.tableHeader)
-                const resultedRows = data.map((column: any) => {
+            const url = getRequestUrl(result.url, params);
+            request(url, 'GET').then(data => {
+                const resultedRows = data.content.map((column: any) => {
                     const resultedRow: any = {};
                     for (const key in column) {
                         resultedRow[result.fieldByName[key]] = column[key]
@@ -100,49 +101,94 @@ export const MainPage: React.FC = () => {
 
                     return resultedRow;
                 })
-                setRows(resultedRows.slice(0, 10))
+                setPageCount(data.totalPages)
+                setRows(resultedRows)
+            }).catch(() => {
+                setRows([])
             })
         } catch (e) {
         }
+    }, [clearNotifications, requestParams, request])
+
+    const setParamsAndGetRows = useCallback((params: requestInterface, entityName: String | undefined) => {
+        setRequestParams(params)
+        getRows(entityName, params)
+    }, [getRows])
+
+
+    useEffect(() => {
+        const tableElements = checkedList.slice(1);
+        const activeElement = tableElements.length === 1 ? tableElements[0] : null
+        setActiveRow(activeElement)
+    }, [checkedList])
+
+    const onChangePage = (page: number) => {
+        const newRequestParams = {...requestParams, page};
+        setParamsAndGetRows(newRequestParams, activeEntity?.name)
     }
 
-    const modifyObject = useCallback((object: any, method: String) => {
-        clearError();
+    const onFilterItems = (value: any) => {
+        const sort = Object.keys(activeEntity?.fieldByName).find(key => activeEntity?.fieldByName[`${key}`] === value)
+        const newRequestParams = {...defaultRequestParams, sort}
+        clearRows();
+        setParamsAndGetRows(newRequestParams, activeEntity?.name)
+    }
+
+    const selectEntity = (value: string) => {
+        clearRows()
+        setParamsAndGetRows(defaultRequestParams, value)
+    }
+
+    const getDefaultRows = useCallback(() => {
+        clearRows()
+        setParamsAndGetRows(defaultRequestParams, activeEntity?.name)
+    }, [activeEntity, setParamsAndGetRows])
+
+
+    const sentRequestWithReFresh = useCallback(async (url: string, method: 'PUT' | 'POST' | 'DELETE', body: any) => {
+        clearNotifications();
+        await request(url, method, body)
+        onCheckedChange([{} as IRowsInterface])
+        getDefaultRows()
+        setNotification(requestMessages[method])
+    }, [getDefaultRows, request, clearNotifications])
+
+    const modifyObject = useCallback(async (object: any, method: 'PUT' | 'POST') => {
         try {
             if (activeEntity) {
                 const body: any = {};
+
                 Object.entries(activeEntity.fieldByName).forEach(([key, value]) => {
                     const requestValue = object[`${value}`]
                     body[`${key}`] = requestValue;
                 });
-                request(activeEntity.url, method, body).then(() => {
-                    onCheckedChange([{} as IRowsInterface])
-                })
+
+                await sentRequestWithReFresh(activeEntity.url, method, body)
             }
         } catch (e) {
+            onCheckedChange([{} as IRowsInterface])
         }
-    }, [activeEntity, request, clearError])
+    }, [activeEntity, sentRequestWithReFresh])
 
-    const deleteObjects = useCallback(() => {
+    const deleteObjects = useCallback(async () => {
         try {
             if (activeEntity) {
-                clearError();
                 const body = checkedList.slice(1).map(check => getObjectId(check, activeEntity));
-                request(activeEntity.url, 'DELETE', body).then(() => {
-                    onCheckedChange([{} as IRowsInterface])
-                })
+
+                await sentRequestWithReFresh(activeEntity.url, 'DELETE', body)
             }
-
         } catch (e) {
+            onCheckedChange([{} as IRowsInterface])
         }
-    }, [activeEntity, checkedList, request, clearError])
+    }, [activeEntity, checkedList, sentRequestWithReFresh])
 
-    const createObject = useCallback((object: any) => {
-        modifyObject(object, 'POST')
+
+    const createObject = useCallback(async (object: any) => {
+        await modifyObject(object, 'POST')
     }, [modifyObject])
 
-    const editObject = useCallback((object: any) => {
-        modifyObject(object, 'PUT')
+    const editObject = useCallback(async (object: any) => {
+        await modifyObject(object, 'PUT')
     }, [modifyObject])
 
     return (
@@ -150,17 +196,26 @@ export const MainPage: React.FC = () => {
             <ThemeWrapper>
                 <Header/>
                 <div className="main">
-                    <ObjectSelect objectList={objectList} selectType={selectObject}/>
+                    <ObjectSelect objectList={objectList} getRows={selectEntity}/>
                     <div className="main-table">
-                        {error &&
-                        <Alert
-                            severity={'error'}
-                            title={error}
-                            variant={'standard'}
-                            className='notification'
-                        />
+                        {
+                            error &&
+                            <Alert
+                                severity={'error'}
+                                title={error}
+                                variant={'standard'}
+                                className='notification'
+                            />
                         }
-                        {rows.length > 0 &&
+                        {
+                            notification &&
+                            <Alert
+                                className='notification'
+                            >
+                                {notification}
+                            </Alert>
+                        }
+
                         <BtnBar
                             isEditBtnDisabled={!activeRow}
                             isDeleteBtnDisabled={!checkedList.slice(1).length}
@@ -168,12 +223,20 @@ export const MainPage: React.FC = () => {
                             onEditDialogOpen={onEditDialogOpen}
                             onCreateDialogOpen={onCreateDialogOpen}
                             onDeleteObjects={deleteObjects}
-                        />}
+                            filterItem={activeEntity?.fieldByName[`${requestParams.sort}`]}
+                            filterElements={getVisibleEntityFields(columns)}
+                            onFilterItems={onFilterItems}
+                            isNeedReload={!!error}
+                            isBarEnabled={rows.length > 0}
+                            reload={getDefaultRows}
+                        />
                         <ResultTable
                             rows={rows}
                             checked={checkedList}
                             columns={getVisibleEntityFields(columns)}
                             onCheckedChange={onCheckedChange}
+                            onChangePage={(page) => onChangePage(page)}
+                            pageCount={pageCount}
                         />
                     </div>
                 </div>
