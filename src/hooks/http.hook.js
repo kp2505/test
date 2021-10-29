@@ -1,11 +1,5 @@
 import {useState, useCallback} from "react";
-
-const localizedError = {
-    'POST': 'Что-то пошло не так во время создания данных',
-    'GET': 'Что-то пошло не так во время получения данных',
-    'DELETE': 'Что-то пошло не так во время удаления данных',
-    'PUT': 'Что-то пошло не так во время изменения данных'
-}
+import { localizedError } from "../constants/messages";
 
 export const useHttp = () => {
     const [pending, setPending] = useState(false)

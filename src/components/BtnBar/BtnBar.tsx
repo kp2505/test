@@ -12,8 +12,9 @@ interface BtnBarProps {
     onEditDialogOpen: () => any,
     onCreateDialogOpen: () => any,
     onDeleteObjects: () => any,
-    filterItems: (item: any) => any,
-    filterElement: factoryTableHeaderInterface[],
+    onFilterItems: (item: any) => any,
+    filterElements: factoryTableHeaderInterface[],
+    filterItem: string | undefined,
     isNeedReload: boolean,
     isBarEnabled: boolean,
     reload: () => any,
@@ -27,37 +28,43 @@ export const BtnBar: React.FC<BtnBarProps> = (
         isEditBtnDisabled,
         isDeleteBtnDisabled,
         onDeleteObjects,
-        filterElement,
-        filterItems,
+        filterElements,
+        onFilterItems,
         isNeedReload,
         isBarEnabled,
-        reload
+        reload,
+        filterItem
     }) => {
     return (
         <div className="bar-container">
-
-
             {isBarEnabled ?
                 <div className="btn-container">
                     <div className="filters-wrap">
                         <div className="filters">
                             <Filter/>
                             <div className="filters-name">
-                                {filterElement.length > 0 && <Select
-                                    onChange={(e) => filterItems(e.target.value)}
-                                    label="Фильтр"
-                                    formControlStyle={{width: '200px'}}
-                                >
-                                    {filterElement.map((elem: any) =>
-                                        <MenuItem
-                                            key={`${elem.name}`}
-                                            value={elem.name}
-                                            className='menu-item'
+                                {
+                                    (
+                                        <Select
+                                            onChange={(e) => onFilterItems(e.target.value)}
+                                            label="Фильтровать по"
+                                            formControlStyle={{width: '200px'}}
+                                            value={filterItem}
                                         >
-                                            {elem.title}
-                                        </MenuItem>
-                                    )}
-                                </Select>
+                                            {
+                                                filterElements.map((elem: any) =>
+                                                    <MenuItem
+                                                        key={`${elem.name}`}
+                                                        value={elem.name}
+                                                        className='menu-item'
+                                                        selected={elem.name === filterItem}
+                                                    >
+                                                        {elem.title}
+                                                    </MenuItem>
+                                                )
+                                            }
+                                        </Select>
+                                    )
                                 }
                             </div>
                         </div>
