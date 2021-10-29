@@ -25,21 +25,24 @@ function ThemeWrapper(props: any) {
 }
 
 export const MainPage: React.FC = () => {
-    const {request, pending, error, clearError} = useHttp()
-    const [checkedList, onCheckedChange] = useState<IRowsInterface[]>([{} as IRowsInterface])
+    const { request, pending, error, clearError } = useHttp()
+    const [requestParams, setRequestParams] = useState<requestInterface>(defaultRequestParams)
+    const [pageCount, setPageCount] = useState(1)
+    const [notification, setNotification] = useState<string | null>(null)
+
     const [isEditDialogVisible, setEditDialogVisible] = useState(false)
     const [isCreateDialogVisible, setCreateDialogVisible] = useState(false)
     const [isLoadDialogVisible, setLoadDialogVisible] = useState(false)
     const [activeRow, setActiveRow] = useState<IRowsInterface | null>(null)
     const [isLoading, setLoading] = useState(false)
+    const [isCompleted] = useState(false)
+
     const [rows, setRows] = useState<IRowsInterface[]>([])
     const [columns, setColumns] = useState<TableColumn<IRowsInterface>[]>(defaultHeader)
+    const [checkedList, onCheckedChange] = useState<IRowsInterface[]>([{} as IRowsInterface])
+
     const [objectList, setObjectList] = useState<EntityInterface[]>([])
-    const [isCompleted] = useState(false)
     const [activeEntity, setActiveEntity] = useState<EntityInterface | null>(null)
-    const [requestParams, setRequestParams] = useState<requestInterface>(defaultRequestParams)
-    const [pageCount, setPageCount] = useState(1)
-    const [notification, setNotification] = useState<string | null>(null)
 
     const getEntities = useCallback(async () => {
         try {
@@ -119,14 +122,14 @@ export const MainPage: React.FC = () => {
         setActiveRow(activeElement)
     }, [checkedList])
 
-    const onChangePage = (pageNumber: number) => {
-        const newRequestParams = {...requestParams, pageNumber};
+    const onChangePage = (page: number) => {
+        const newRequestParams = {...requestParams, page};
         setParamsAndGetRows(newRequestParams, activeEntity?.name)
     }
 
     const onFilterItems = (value: any) => {
-        const sortBy = Object.keys(activeEntity?.fieldByName).find(key => activeEntity?.fieldByName[`${key}`] === value)
-        const newRequestParams = {...defaultRequestParams, sortBy}
+        const sort = Object.keys(activeEntity?.fieldByName).find(key => activeEntity?.fieldByName[`${key}`] === value)
+        const newRequestParams = {...defaultRequestParams, sort}
         clearRows();
         setParamsAndGetRows(newRequestParams, activeEntity?.name)
     }
@@ -220,7 +223,7 @@ export const MainPage: React.FC = () => {
                             onEditDialogOpen={onEditDialogOpen}
                             onCreateDialogOpen={onCreateDialogOpen}
                             onDeleteObjects={deleteObjects}
-                            filterItem={activeEntity?.fieldByName[`${requestParams.sortBy}`]}
+                            filterItem={activeEntity?.fieldByName[`${requestParams.sort}`]}
                             filterElements={getVisibleEntityFields(columns)}
                             onFilterItems={onFilterItems}
                             isNeedReload={!!error}

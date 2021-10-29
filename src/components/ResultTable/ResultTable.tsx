@@ -44,7 +44,7 @@ export const ResultTable: React.FC<ResultTableProps> = (
                             isPaginationVisible && <Card>
                                 <CardContent>
                                     <Pagination count={pageCount}
-                                                onChange={(event, page) => onChangePage(page-1)}/>
+                                                onChange={(event, page) => onChangePage(page)}/>
                                 </CardContent>
                             </Card>
                         }

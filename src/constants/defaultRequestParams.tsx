@@ -1,1 +1,1 @@
-export const defaultRequestParams = { pageNumber: 0, pageSize: 5 }
+export const defaultRequestParams = { page: 1, size: 5 }

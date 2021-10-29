@@ -32,7 +32,7 @@ export interface factoryTableHeaderInterface {
 }
 
 export interface requestInterface {
-    pageNumber: number,
-    pageSize: number,
-    sortBy?: string,
+    page: number,
+    size: number,
+    sort?: string,
 }
