@@ -10,11 +10,12 @@ import {
 import {TableColumn} from '@nlmk/ds/dist/components/Table'
 import {Alert, CommonWrapper} from '@nlmk/ds/dist/components'
 import React, {useCallback, useEffect, useState} from "react";
-import {IRowsInterface, EntityInterface} from "../../interfaces";
+import {IRowsInterface, EntityInterface, requestInterface} from "../../interfaces";
 import {useHttp} from "../../hooks/http.hook";
 import {getEntity, getObjectId, getVisibleEntityFields} from "../../helpers/entities/entities";
 import {defaultHeader} from "../../constants/headerStructure";
 import {getRequestUrl} from "../../helpers/http/http";
+import {defaultRequestParams} from "../../constants/defaultRequestParams";
 
 function ThemeWrapper(props: any) {
     return (
@@ -34,8 +35,8 @@ export const MainPage: React.FC = () => {
     const [columns, setColumns] = useState<TableColumn<IRowsInterface>[]>(defaultHeader)
     const [objectList, setObjectList] = useState<EntityInterface[]>([])
     const [isCompleted] = useState(false)
-    const [activeEntity, setActiveObject] = useState<EntityInterface | null>(null)
-    const [requestParams, setRequestParams] = useState({pageNumber: 0, pageSize: 5})
+    const [activeEntity, setActiveEntity] = useState<EntityInterface | null>(null)
+    const [requestParams, setRequestParams] = useState<requestInterface>(defaultRequestParams)
     const [pageCount, setPageCount] = useState(1)
 
     const getEntities = useCallback(() => {
@@ -69,6 +70,16 @@ export const MainPage: React.FC = () => {
         setCreateDialogVisible(false)
     }
 
+    const clearRows = () => {
+        setRows([])
+        setPageCount(0);
+    }
+
+    const setParamsAndGetRows = (params: requestInterface,entityName: String | undefined) => {
+        setRequestParams(params)
+        getRows(entityName, params)
+    }
+
 
     useEffect(() => {
         const tableElements = checkedList.slice(1);
@@ -77,28 +88,38 @@ export const MainPage: React.FC = () => {
     }, [checkedList])
 
     const onChangePage = (pageNumber: number) => {
-        const newRequestParams = {pageNumber, pageSize: 5}
-        setRequestParams(newRequestParams)
-        getRows(activeEntity?.name, newRequestParams)
+        const newRequestParams = { ...requestParams, pageNumber};
+        setParamsAndGetRows(newRequestParams, activeEntity?.name)
+    }
+
+    const onFilterItems = (value: any) => {
+        const sortBy = Object.keys(activeEntity?.fieldByName).find(key => activeEntity?.fieldByName[`${key}`] === value)
+        const newRequestParams = { ...defaultRequestParams,sortBy }
+        clearRows();
+        setParamsAndGetRows(newRequestParams, activeEntity?.name)
+    }
+
+    const onReload = () => {
+        clearRows()
+        getRows(activeEntity?.name, defaultRequestParams)
     }
 
     const selectEntity = (value: string) => {
-        setPageCount(0);
-        const newRequestParams = {pageNumber: 0, pageSize: 5}
-        setRequestParams(newRequestParams)
-        getRows(value, newRequestParams)
+        clearRows()
+        setParamsAndGetRows(defaultRequestParams, value)
     }
+
 
     const getRows = (value: any, params = requestParams) => {
         const result = getEntity(value);
+        setActiveEntity(result);
+        setColumns(result.tableHeader);
         setActiveRow(null);
         clearError();
         onCheckedChange([{} as IRowsInterface])
         try {
             const url = getRequestUrl(result.url, params);
             request(url, 'GET').then(data => {
-                setActiveObject(result);
-                setColumns(result.tableHeader);
                 const resultedRows = data.content.map((column: any) => {
                     const resultedRow: any = {};
                     for (const key in column) {
@@ -110,7 +131,6 @@ export const MainPage: React.FC = () => {
                 setPageCount(data.totalPages)
                 setRows(resultedRows)
             }).catch(() => {
-                setColumns(defaultHeader);
                 setRows([])
             })
         } catch (e) {
@@ -171,7 +191,6 @@ export const MainPage: React.FC = () => {
                             className='notification'
                         />
                         }
-                        {rows.length > 0 &&
                         <BtnBar
                             isEditBtnDisabled={!activeRow}
                             isDeleteBtnDisabled={!checkedList.slice(1).length}
@@ -179,14 +198,18 @@ export const MainPage: React.FC = () => {
                             onEditDialogOpen={onEditDialogOpen}
                             onCreateDialogOpen={onCreateDialogOpen}
                             onDeleteObjects={deleteObjects}
-                        />}
+                            filterElement={getVisibleEntityFields(columns)}
+                            filterItems={onFilterItems}
+                            isNeedReload={!!error}
+                            isBarEnabled={rows.length > 0}
+                            reload={onReload}
+                        />
                         <ResultTable
                             rows={rows}
                             checked={checkedList}
                             columns={getVisibleEntityFields(columns)}
                             onCheckedChange={onCheckedChange}
                             onChangePage={(page) => onChangePage(page)}
-                            currentPage={requestParams.pageNumber}
                             pageCount={pageCount}
                         />
                     </div>

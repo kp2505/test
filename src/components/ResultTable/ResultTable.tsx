@@ -10,7 +10,6 @@ interface ResultTableProps {
     onCheckedChange: (e: any) => any,
     onChangePage: (page: number) => any,
     pageCount: number,
-    currentPage: number,
 }
 
 export const ResultTable: React.FC<ResultTableProps> = (
@@ -21,7 +20,6 @@ export const ResultTable: React.FC<ResultTableProps> = (
         onCheckedChange,
         onChangePage,
         pageCount,
-        currentPage
     }) => {
 
     const isPaginationVisible = pageCount > 1;
